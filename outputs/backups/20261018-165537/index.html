@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Historical Persona · Middle East</title>
+  <meta name="description" content="A personality test that reveals the historical figure who shares your soul." />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="bg-pattern" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="22" height="22">
+          <path d="M16 2 L20 12 L30 16 L20 20 L16 30 L12 20 L2 16 L12 12 Z" fill="currentColor"/>
+        </svg>
+      </span>
+      <span id="brand-name" class="brand-name"></span>
+    </div>
+    <div class="lang-switch" role="group" aria-label="Language">
+      <button id="lang-en" type="button">English</button>
+      <span class="lang-sep">|</span>
+      <button id="lang-ar" type="button">العربية</button>
+    </div>
+  </header>
+
+  <main id="app">
+
+    <!-- ============ HOME ============ -->
+    <section id="screen-home" class="screen">
+      <div class="hero">
+        <p id="eyebrow" class="eyebrow"></p>
+        <h1 id="home-title" class="hero-title"></h1>
+        <p id="home-sub" class="hero-sub"></p>
+
+        <div class="hero-ornament" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="56" height="56">
+            <g fill="none" stroke="currentColor" stroke-width="1">
+              <path d="M32 4 L39 25 L60 32 L39 39 L32 60 L25 39 L4 32 L25 25 Z"/>
+              <rect x="24" y="24" width="16" height="16"/>
+              <circle cx="32" cy="32" r="3"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="hero-actions">
+          <button id="begin-btn" type="button" class="btn btn-primary btn-lg"></button>
+        </div>
+        <p id="free-note" class="free-note"></p>
+      </div>
+
+      <div id="features" class="features"></div>
+    </section>
+
+    <!-- ============ QUIZ ============ -->
+    <section id="screen-quiz" class="screen hidden">
+      <div class="quiz-wrap">
+        <div class="quiz-top">
+          <button id="quiz-back" type="button" class="btn-text"></button>
+          <span id="quiz-counter" class="quiz-counter"></span>
+        </div>
+        <div class="progress">
+          <div id="quiz-progress-fill" class="progress-fill"></div>
+        </div>
+
+        <h2 id="quiz-question" class="quiz-question"></h2>
+
+        <div class="options">
+          <button id="opt-a" type="button" class="option">
+            <span class="opt-letter"></span>
+            <span id="opt-a-label" class="opt-text"></span>
+          </button>
+          <button id="opt-b" type="button" class="option">
+            <span class="opt-letter"></span>
+            <span id="opt-b-label" class="opt-text"></span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RESULT ============ -->
+    <section id="screen-result" class="screen hidden">
+      <div class="result-wrap">
+
+        <!-- Locked / paywall -->
+        <div id="result-locked">
+          <h1 id="result-ready" class="result-title"></h1>
+          <p id="result-locked-hint" class="result-sub"></p>
+
+          <div class="teaser-card">
+            <span id="teaser-code" class="teaser-code"></span>
+            <span id="teaser-figure" class="teaser-figure blurred"></span>
+          </div>
+
+          <button id="unlock-btn" type="button" class="btn btn-primary btn-lg"></button>
+          <p id="price-note" class="price-note"></p>
+
+          <button id="completed-payment" type="button" class="btn-text hidden"></button>
+          <p id="completed-payment-hint" class="micro-note hidden"></p>
+
+          <div class="demo">
+            <button id="demo-link" type="button" class="btn-text demo-link"></button>
+            <div id="demo-box" class="demo-box hidden">
+              <input id="code-input" type="text" autocomplete="off" />
+              <button id="unlock-code-btn" type="button" class="btn btn-ghost"></button>
+              <p id="code-msg" class="code-msg"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full report -->
+        <div id="result-full" class="hidden">
+          <p id="full-prototype-label" class="eyebrow"></p>
+          <div class="report-head">
+            <div class="report-badge">
+              <span id="full-code" class="full-code"></span>
+            </div>
+            <div class="report-id">
+              <h1 id="full-figure" class="full-figure"></h1>
+              <p class="full-epithet"><span id="full-epithet"></span> · <span id="full-years"></span></p>
+              <p id="full-tagline" class="full-tagline"></p>
+            </div>
+          </div>
+
+          <div id="dim-summary" class="dim-summary"></div>
+
+          <p id="full-essence" class="essence"></p>
+
+          <div class="report-grid">
+            <div class="report-block">
+              <h2 id="full-strengths-label" class="block-label"></h2>
+              <ul id="full-strengths" class="pill-list"></ul>
+            </div>
+            <div class="report-block">
+              <h2 id="full-blindspots-label" class="block-label"></h2>
+              <ul id="full-blindspots" class="plain-list"></ul>
+            </div>
+          </div>
+
+          <div class="report-block">
+            <h2 id="full-growth-label" class="block-label"></h2>
+            <p id="full-growth" class="block-text"></p>
+          </div>
+
+          <div class="report-block echo-block">
+            <h2 id="full-echo-label" class="block-label"></h2>
+            <p id="full-echo" class="block-text"></p>
+          </div>
+
+          <div class="result-actions">
+            <button id="share-btn" type="button" class="btn btn-ghost"></button>
+            <button id="retake-btn" type="button" class="btn btn-primary"></button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span id="footer-note" class="footer-note"></span>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/content.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
