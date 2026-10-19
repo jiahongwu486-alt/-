@@ -317,9 +317,10 @@
         .then((j) => {
           if (j && j.ok && j.checkoutUrl) {
             try { localStorage.setItem("hp_resultId", j.resultId); } catch (e) {}
-            window.open(j.checkoutUrl, "_blank", "noopener,noreferrer");
-            $("#completed-payment").classList.remove("hidden");
-            $("#completed-payment-hint").classList.remove("hidden");
+            // Navigate in the same tab so the Waffo success redirect returns here,
+            // where init() polls /api/verify and shows the report automatically.
+            window.location.href = j.checkoutUrl;
+            return;
           } else {
             $("#pay-msg").textContent = (j && j.error) || "Checkout failed.";
           }
@@ -365,23 +366,56 @@
   }
 
   function refreshAccess() {
+    pollAccess({ onFail: () => setPayMsg("Payment not confirmed yet. Try again shortly.") });
+  }
+
+  /* Poll /api/verify until the order is marked paid (by webhook or Waffo re-check),
+     then apply the report and show the result screen. Resilient to webhook delay. */
+  function pollAccess(opts) {
+    opts = opts || {};
+    const maxAttempts = opts.maxAttempts || 18;
+    const interval = opts.interval || 2500;
     let resultId = null;
     try { resultId = localStorage.getItem("hp_resultId"); } catch (e) {}
-    if (resultId && CFG.verifyEndpoint) {
+    if (!resultId || !CFG.verifyEndpoint) {
+      if (opts.onFail) opts.onFail("no_result");
+      return;
+    }
+    let attempts = 0;
+    function step() {
+      attempts += 1;
       apiFetch(CFG.verifyEndpoint + "?resultId=" + encodeURIComponent(resultId))
         .then((r) => r.json())
         .then((j) => {
           if (j && j.ok && j.report) {
             applyServerReport(j.report, j.token);
             unlock();
-          } else {
-            $("#pay-msg").textContent = "Payment not confirmed yet.";
+            show("result");
+            if (opts.onDone) opts.onDone();
+            return;
+          }
+          if (attempts < maxAttempts) {
+            if (opts.onTick) opts.onTick(attempts, maxAttempts);
+            setTimeout(step, interval);
+          } else if (opts.onFail) {
+            opts.onFail("timeout");
           }
         })
-        .catch(() => { $("#pay-msg").textContent = "Verification unavailable."; });
-      return;
+        .catch(() => {
+          if (attempts < maxAttempts) {
+            if (opts.onTick) opts.onTick(attempts, maxAttempts);
+            setTimeout(step, interval);
+          } else if (opts.onFail) {
+            opts.onFail("error");
+          }
+        });
     }
-    unlock();
+    step();
+  }
+
+  function setPayMsg(msg) {
+    const el = $("#pay-msg");
+    if (el) el.textContent = msg;
   }
 
   /* ---------- auth ---------- */
@@ -522,7 +556,14 @@
 
     let savedResultId = null;
     try { savedResultId = localStorage.getItem("hp_resultId"); } catch (e) {}
-    if (savedResultId) restorePaidAccess(savedResultId);
+    if (savedResultId) {
+      // Payment may have just completed (e.g. we landed here from the Waffo
+      // success redirect). Poll until the server marks the order paid, then show report.
+      pollAccess({
+        onTick: () => {},
+        onFail: () => {}
+      });
+    }
 
     applyLang();
     renderHome();
