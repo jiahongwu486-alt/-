@@ -15,9 +15,9 @@ services:
         value: PROD_1f86YaT5vrjaP2h2ehWYwB
       - key: ALLOWED_ORIGIN
         value: "*"
-      # Replace with your final public URL after the first deploy
+      # Final public URL assigned by Render (bare name was taken, so the -3hwk suffix is required)
       - key: WAFFO_SUCCESS_URL
-        value: https://historical-persona.onrender.com/
+        value: https://historical-persona-3hwk.onrender.com/
       # Set these manually in the Render dashboard (secrets must not be committed)
       - key: WAFFO_PRIVATE_KEY
         sync: false

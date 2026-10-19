@@ -173,6 +173,7 @@
     $("#code-input").placeholder = t(ui.enterCode);
     $("#unlock-code-btn").textContent = t(ui.unlock);
     $("#code-msg").textContent = "";
+    $("#pay-msg").textContent = "";
 
     $("#teaser-figure").textContent = t(r.primary.names);
     if (!CFG.previewEnabled) $("#demo-link").classList.add("hidden");
@@ -305,6 +306,7 @@
   }
 
   function startPayment() {
+    $("#pay-msg").textContent = "";
     if (CFG.payProvider === "waffo" && CFG.createCheckoutEndpoint) {
       apiFetch(CFG.createCheckoutEndpoint, {
         method: "POST",
@@ -319,10 +321,13 @@
             $("#completed-payment").classList.remove("hidden");
             $("#completed-payment-hint").classList.remove("hidden");
           } else {
-            $("#code-msg").textContent = (j && j.error) || "Checkout failed.";
+            $("#pay-msg").textContent = (j && j.error) || "Checkout failed.";
           }
         })
-        .catch(() => { $("#code-msg").textContent = "Payment server unavailable."; });
+        .catch(() => {
+          $("#pay-msg").textContent =
+            "Payment server unavailable. Start it with: node outputs/server/waffo-payment.mjs, then open http://localhost:8787";
+        });
       return;
     }
 
@@ -370,10 +375,10 @@
             applyServerReport(j.report, j.token);
             unlock();
           } else {
-            $("#code-msg").textContent = "Payment not confirmed yet.";
+            $("#pay-msg").textContent = "Payment not confirmed yet.";
           }
         })
-        .catch(() => { $("#code-msg").textContent = "Verification unavailable."; });
+        .catch(() => { $("#pay-msg").textContent = "Verification unavailable."; });
       return;
     }
     unlock();

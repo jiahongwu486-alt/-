@@ -305,6 +305,7 @@ body {
   color: var(--sand-dim);
 }
 .price-note { color: var(--sand-dim); font-size: 13px; margin-top: 14px; }
+.pay-msg { color: #e0a06a; font-size: 13px; min-height: 18px; margin-top: 10px; }
 .micro-note { color: var(--sand-dim); font-size: 12px; margin-top: 6px; }
 .demo { margin-top: 26px; }
 .demo-box {
