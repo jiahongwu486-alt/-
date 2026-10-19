@@ -9,6 +9,8 @@ services:
         value: MER_2lujdyWwFKLsLlBCOnJKfr
       - key: WAFFO_ENV
         value: test
+      - key: WAFFO_STORE_SLUG
+        value: mithaq-y9hk7eyd
       - key: WAFFO_STORE_ID
         value: STO_6PelRkh3ttYesqlDMaZsYp
       - key: WAFFO_PRODUCT_ID

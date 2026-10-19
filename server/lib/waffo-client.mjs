@@ -46,24 +46,31 @@ export function verifyWebhookSignature(
 }
 
 export class WaffoClient {
-  constructor({ merchantId, privateKey, baseUrl = "https://api.waffo.ai" }) {
+  constructor({ merchantId, privateKey, baseUrl = "https://api.waffo.ai", storeSlug = "", envName = "test" }) {
     this.merchantId = merchantId;
     this.privateKey = privateKey;
     this.baseUrl = baseUrl;
+    this.storeSlug = storeSlug;
+    this.envName = envName;
   }
 
-  async request(method, path, body) {
+  async request(method, path, body, auth = "apikey") {
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const bodyStr = JSON.stringify(body || {});
-    const signature = buildSignature(method, path, timestamp, bodyStr, this.privateKey);
+    const headers = { "Content-Type": "application/json" };
+    if (auth === "storeslug" && this.storeSlug) {
+      // Public checkout flow: Store Slug auth (no API-key signature required)
+      headers["X-Store-Slug"] = this.storeSlug;
+      headers["X-Environment"] = this.envName === "prod" ? "prod" : "test";
+    } else {
+      const signature = buildSignature(method, path, timestamp, bodyStr, this.privateKey);
+      headers["X-Merchant-Id"] = this.merchantId;
+      headers["X-Timestamp"] = timestamp;
+      headers["X-Signature"] = signature;
+    }
     const res = await fetch(this.baseUrl + path, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-        "X-Merchant-Id": this.merchantId,
-        "X-Timestamp": timestamp,
-        "X-Signature": signature
-      },
+      headers,
       body: bodyStr
     });
     let json = null;
@@ -98,7 +105,7 @@ export class WaffoClient {
       metadata,
       expiresInSeconds,
       language
-    });
+    }, "storeslug");
     return res.data;
   }
 

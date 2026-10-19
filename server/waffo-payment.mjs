@@ -391,7 +391,9 @@ if (isMain) {
   }
   const client = new WaffoClient({
     merchantId: cfg.merchantId,
-    privateKey: cfg.privateKey
+    privateKey: cfg.privateKey,
+    storeSlug: cfg.storeSlug,
+    envName: cfg.envName
   });
   const server = createServer({ cfg, client });
   server.listen(cfg.port, () => {

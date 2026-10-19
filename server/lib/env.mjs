@@ -44,6 +44,7 @@ export function getConfig(env = process.env) {
     webhookPublicKey: env.WAFFO_WEBHOOK_PUBLIC_KEY || "",
     storeId: env.WAFFO_STORE_ID || "",
     productId: env.WAFFO_PRODUCT_ID || "",
+    storeSlug: env.WAFFO_STORE_SLUG || "",
     envName: env.WAFFO_ENV === "prod" ? "prod" : "test",
     port: Number(env.PORT || 8787),
     allowedOrigin: env.ALLOWED_ORIGIN || "*",
