@@ -211,6 +211,14 @@ export function createServer({ cfg, client }) {
       return json(res, 200, { ok: true, env: cfg.envName, configured: missingKeys(cfg).length === 0 }, origin);
     }
 
+    // TEMP diagnostic: confirm the deployed webhook public key matches the
+    // Waffo dashboard "公钥 TEST" key (sha256 e39c3c78806dfc0f...). Returns only
+    // a hash, never the key itself. Will be removed after verification.
+    if (req.method === "GET" && url.pathname === "/api/debug/webhook-key-hash") {
+      const h = crypto.createHash("sha256").update(cfg.webhookPublicKey || "").digest("hex");
+      return json(res, 200, { ok: true, sha256: h, expectedPrefix: "e39c3c78806dfc0f" }, origin);
+    }
+
     if (req.method === "POST" && url.pathname === "/api/auth/signup") {
       let body;
       try { body = JSON.parse((await readBody(req)).toString("utf8")); }
