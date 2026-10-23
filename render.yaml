@@ -20,8 +20,14 @@ services:
       # Final public URL assigned by Render (bare name was taken, so the -3hwk suffix is required)
       - key: WAFFO_SUCCESS_URL
         value: https://historical-persona-3hwk.onrender.com/
-      # Set these manually in the Render dashboard (secrets must not be committed)
+      # Merchant private key stays in the Render dashboard (secret, never committed).
+      # WAFFO_WEBHOOK_PUBLIC_KEY is Waffo's *public* test-mode key (matches the
+      # "公钥 TEST" shown in the Waffo dashboard). It is NOT a secret, so it is
+      # pinned here so webhook signature verification (order.completed) passes.
       - key: WAFFO_PRIVATE_KEY
         sync: false
       - key: WAFFO_WEBHOOK_PUBLIC_KEY
-        sync: false
+        value: |
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxnmRY6yMMA3lVqmAU6ZGb1sjL/+r/z6E+ZjkXaDAKiqOhk9rpazni0bNsGXwmftTPk9jy2wn+j6JHODD/WH/SCnSfvKkLIjy4Hk7BuCgB174C0ydan7J+KgXLkOwgCAxxB68t2tezldwo74ZpXgnF49opzMvQ9prEwIAWOE+kV9iK6gx/AckSMtHIHpUesoPDkldpmFHlB2qpf1vsFTZ5kD6DmGl+2GIVK01aChy2lk8pLv0yUMu18v44sLkO5M44TkGPJD9qG09wrvVG2wpOTVCn1n5pP8P+HRLcgzbUB3OlZVfdFurn6EZwtyL4ZD9kdkQ4EZE/9inKcp3c1h4xwIDAQAB
+          -----END PUBLIC KEY-----
