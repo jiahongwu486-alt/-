@@ -215,8 +215,14 @@ export function createServer({ cfg, client }) {
     // Waffo dashboard "公钥 TEST" key (sha256 e39c3c78806dfc0f...). Returns only
     // a hash, never the key itself. Will be removed after verification.
     if (req.method === "GET" && url.pathname === "/api/debug/webhook-key-hash") {
-      const h = crypto.createHash("sha256").update(cfg.webhookPublicKey || "").digest("hex");
-      return json(res, 200, { ok: true, sha256: h, expectedPrefix: "e39c3c78806dfc0f" }, origin);
+      const k = cfg.webhookPublicKey || "";
+      const h = crypto.createHash("sha256").update(k).digest("hex");
+      let derH = null, derMatch = false;
+      try {
+        const b64 = (k.match(/MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A[0-9A-Za-z+/=]+/) || [""])[0];
+        if (b64) { derH = crypto.createHash("sha256").update(Buffer.from(b64, "base64")).digest("hex"); derMatch = derH.startsWith("e39c3c78806dfc0f"); }
+      } catch {}
+      return json(res, 200, { ok: true, sha256: h, derSha256: derH, derMatch, expectedDerPrefix: "e39c3c78806dfc0f" }, origin);
     }
 
     if (req.method === "POST" && url.pathname === "/api/auth/signup") {
