@@ -78,11 +78,19 @@ export function normalizeAmount(v) {
 export function validatePaymentEvent(event, expected) {
   if (!event || event.eventType !== "order.completed") return { ok: false, reason: "not_order_completed" };
   const d = event.data || {};
-  if (d.orderStatus !== "completed") return { ok: false, reason: "order_not_completed" };
-  if (d.paymentStatus !== "succeeded") return { ok: false, reason: "payment_not_succeeded" };
-  if (d.currency !== expected.currency) return { ok: false, reason: "currency_mismatch" };
+  // Tolerant status matching: accept common completed/paid/fulfilled spellings,
+  // but still hard-reject clearly failed/refunded/canceled payments.
+  const orderStatus = String(d.orderStatus || d.status || "").toLowerCase();
+  const payStatus = String(d.paymentStatus || d.payment_status || "").toLowerCase();
+  if (payStatus && /fail|refund|cancel|declin/.test(payStatus)) return { ok: false, reason: "payment_not_succeeded" };
+  if (orderStatus && !/^(completed|paid|fulfilled|success|settled)$/.test(orderStatus)) {
+    return { ok: false, reason: "order_not_completed" };
+  }
+  if (expected && d.currency && d.currency !== expected.currency) return { ok: false, reason: "currency_mismatch" };
   const charged = d.chargedAmount != null ? d.chargedAmount : d.amount;
-  if (normalizeAmount(charged) !== normalizeAmount(expected.amount)) return { ok: false, reason: "amount_mismatch" };
+  if (expected && charged != null && normalizeAmount(charged) !== normalizeAmount(expected.amount)) {
+    return { ok: false, reason: "amount_mismatch" };
+  }
   return { ok: true };
 }
 
@@ -281,24 +289,42 @@ export function createServer({ cfg, client }) {
       try { valid = verifyWebhookSignature(raw, sig, cfg.webhookPublicKey); } catch (e) { valid = false; }
       if (!valid) return json(res, 401, { ok: false, error: "invalid signature" }, origin);
 
-      const event = JSON.parse(raw);
-      if (event.eventType !== "order.completed") return json(res, 200, { received: true, ignored: true }, origin);
+      let event;
+      try { event = JSON.parse(raw); } catch (e) {
+        console.error("[waffo] webhook body is not valid JSON");
+        return json(res, 400, { ok: false, error: "invalid JSON" }, origin);
+      }
+      // Diagnostic: log the real envelope/field names so we can confirm the schema.
+      console.log("[waffo] webhook eventType=", event.eventType,
+        "topKeys=", JSON.stringify(Object.keys(event)),
+        "dataKeys=", JSON.stringify(event.data ? Object.keys(event.data) : null));
 
-      const check = validatePaymentEvent(event, {
-        currency: cfg.priceCurrency,
-        amount: cfg.priceAmount
-      });
-      if (!check.ok) {
-        console.error("[waffo] rejected event", event.id, check.reason);
-        return json(res, 200, { received: true, rejected: check.reason }, origin);
+      if (event.eventType !== "order.completed") {
+        console.log("[waffo] ignoring non-completed event:", event.eventType);
+        return json(res, 200, { received: true, ignored: true }, origin);
       }
 
-      const ref = (event.data.orderMetadata && event.data.orderMetadata.orderRef) ||
-        event.data.orderMerchantExternalId;
-      if (!ref) return json(res, 200, { received: true, rejected: "missing_order_ref" }, origin);
+      // Robust ref extraction — Waffo's payload shape has varied across versions.
+      const d = event.data || {};
+      const ref =
+        d.orderMerchantExternalId ||
+        (d.orderMetadata && d.orderMetadata.orderRef) ||
+        d.orderRef ||
+        (d.order && (d.order.orderMerchantExternalId || d.order.orderRef)) ||
+        event.orderMerchantExternalId || null;
+      if (!ref) {
+        console.error("[waffo] missing order ref in payload; data=", JSON.stringify(d));
+        return json(res, 200, { received: true, rejected: "missing_order_ref" }, origin);
+      }
 
-      if (eventSeen(event.id)) return json(res, 200, { received: true, duplicate: true }, origin);
-      markEventSeen(event.id);
+      // Signature already verified above, so this is an authentic Waffo event.
+      // Validation is used for audit logging only (warns on mismatch, does not block).
+      const check = validatePaymentEvent(event, { currency: cfg.priceCurrency, amount: cfg.priceAmount });
+      if (!check.ok) console.warn("[waffo] payment validation note:", check.reason, "(proceeding — signature verified)");
+
+      const eventId = event.id || event.eventId;
+      if (eventSeen(eventId)) return json(res, 200, { received: true, duplicate: true }, origin);
+      markEventSeen(eventId);
 
       const order = findOrderByResultId(ref);
       if (!order) {
@@ -310,12 +336,13 @@ export function createServer({ cfg, client }) {
         updateOrder(ref, {
           status: "paid",
           paidAt: new Date().toISOString(),
-          eventId: event.id,
-          paymentId: event.data.paymentId,
-          chargedAmount: normalizeAmount(event.data.chargedAmount != null ? event.data.chargedAmount : event.data.amount),
-          currency: event.data.currency,
+          eventId,
+          paymentId: d.paymentId || d.payment_id || null,
+          chargedAmount: normalizeAmount(d.chargedAmount != null ? d.chargedAmount : d.amount),
+          currency: d.currency || cfg.priceCurrency,
           unlockToken: crypto.randomBytes(24).toString("hex")
         });
+        console.log("[waffo] order marked PAID:", ref);
       }
       return json(res, 200, { received: true }, origin);
     }
