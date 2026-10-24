@@ -114,6 +114,19 @@ function findOrderByResultId(resultId) {
   return readLines(ORDERS_FILE).find((o) => o.resultId === resultId) || null;
 }
 
+function normalizeEmail(e) {
+  return String(e || "").trim().toLowerCase();
+}
+
+// Store-Slug checkout sessions silently drop orderMerchantExternalId (Waffo
+// anti-tamper), so when the store isn't production-approved we cannot key by ref.
+// Fall back to the buyer email we pre-filled on the session to find the order.
+function findPendingOrderByEmail(email) {
+  const n = normalizeEmail(email);
+  if (!n) return null;
+  return readLines(ORDERS_FILE).find((o) => o.status !== "paid" && normalizeEmail(o.email) === n) || null;
+}
+
 function updateOrder(resultId, patch) {
   const lines = readLines(ORDERS_FILE);
   let found = false;
@@ -297,24 +310,29 @@ export function createServer({ cfg, client }) {
       const result = computeResult(body.answers);
       const user = authenticate(getBearer(req));
       const resultId = crypto.randomUUID();
+      const buyerEmail = body.email || (user && user.email) || null;
       const order = {
         resultId,
         status: "pending",
         createdAt: new Date().toISOString(),
         userId: user ? user.id : null,
         lang: body.lang === "ar" ? "ar" : "en",
+        email: buyerEmail,
         ...result
       };
       appendLine(ORDERS_FILE, order);
 
       try {
-        // API-key auth is required so Waffo stores orderMerchantExternalId and
-        // echoes it in webhooks (Store Slug silently drops it). Fall back to
-        // Store Slug only if the signed request fails, so checkout keeps working.
+        // API-key auth would let Waffo store orderMerchantExternalId, but the store
+        // is not production-approved so API-key sessions are 403'd ("Store is not
+        // approved for production payments"). Store Slug works for test checkout but
+        // silently drops orderMerchantExternalId, so we pre-fill buyerEmail and
+        // associate the webhook back to the order by email instead.
         const sessionArgs = {
           productId: cfg.productId,
           currency: cfg.priceCurrency,
           successUrl: cfg.successUrl,
+          buyerEmail: buyerEmail || undefined,
           orderMerchantExternalId: resultId,
           metadata: { orderRef: resultId, product: "full-report" },
           expiresInSeconds: 1800,
@@ -373,17 +391,25 @@ export function createServer({ cfg, client }) {
 
       // Robust ref extraction — Waffo's payload shape has varied across versions.
       const d = event.data || {};
-      const ref =
+      let ref =
         d.orderMerchantExternalId ||
         (d.orderMetadata && d.orderMetadata.orderRef) ||
         d.orderRef ||
         (d.order && (d.order.orderMerchantExternalId || d.order.orderRef)) ||
         event.orderMerchantExternalId || null;
+      let order = ref ? findOrderByResultId(ref) : null;
+      // Fallback: Store-Slug sessions drop orderMerchantExternalId, so key by the
+      // buyer email we pre-filled on the session.
+      if (!order && d.buyerEmail) {
+        order = findPendingOrderByEmail(d.buyerEmail);
+        if (order) ref = order.resultId;
+      }
       rec.ref = ref;
-      if (!ref) {
-        rec.outcome = "missing_order_ref";
-        console.error("[waffo] missing order ref in payload; data=", JSON.stringify(d));
-        return json(res, 200, { received: true, rejected: "missing_order_ref" }, origin);
+      rec.orderFound = !!order;
+      if (!order) {
+        rec.outcome = ref ? "unknown_order" : "missing_order_ref";
+        console.error("[waffo] no matching order (ref:", ref, "email:", d.buyerEmail, ")");
+        return json(res, 200, { received: true, rejected: rec.outcome }, origin);
       }
 
       // Signature already verified above, so this is an authentic Waffo event.
@@ -395,8 +421,7 @@ export function createServer({ cfg, client }) {
       if (eventSeen(eventId)) { rec.outcome = "duplicate"; return json(res, 200, { received: true, duplicate: true }, origin); }
       markEventSeen(eventId);
 
-      const order = findOrderByResultId(ref);
-      rec.orderFound = !!order;
+      // `order` was already resolved (by ref or by buyer email) above.
       if (!order) {
         rec.outcome = "unknown_order";
         console.error("[waffo] unknown order ref", ref);
