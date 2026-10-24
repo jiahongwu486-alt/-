@@ -232,6 +232,34 @@ export function createServer({ cfg, client }) {
       return json(res, 200, { ok: true, lastWebhook }, origin);
     }
 
+    // Temporary diagnostic: attempt an API-key auth checkout session and report
+    // the exact error so we can see why it fails on this deployment.
+    if (req.method === "GET" && url.pathname === "/api/debug/apikey-test") {
+      try {
+        const s = await client.createCheckoutSession({
+          productId: cfg.productId,
+          currency: cfg.priceCurrency,
+          successUrl: cfg.successUrl,
+          orderMerchantExternalId: "DIAG-" + crypto.randomUUID(),
+          metadata: { orderRef: "DIAG", product: "diag" },
+          expiresInSeconds: 600,
+          language: "en",
+          auth: "apikey"
+        });
+        return json(res, 200, { ok: true, apikeyWorks: true, sessionId: s.sessionId }, origin);
+      } catch (e) {
+        return json(res, 200, {
+          ok: true,
+          apikeyWorks: false,
+          error: String(e.message),
+          status: e.status || null,
+          body: e.body ? JSON.stringify(e.body).slice(0, 400) : null,
+          hasPrivateKey: !!cfg.privateKey,
+          hasMerchantId: !!cfg.merchantId
+        }, origin);
+      }
+    }
+
     if (req.method === "POST" && url.pathname === "/api/auth/signup") {
       let body;
       try { body = JSON.parse((await readBody(req)).toString("utf8")); }
