@@ -67,6 +67,11 @@ export class WaffoClient {
       headers["X-Merchant-Id"] = this.merchantId;
       headers["X-Timestamp"] = timestamp;
       headers["X-Signature"] = signature;
+      // Tell Waffo which environment the call targets. Without this, server-to-server
+      // calls default to production and hit the "store not approved for production
+      // payments" gate even when our store is in test mode. Adding the header routes
+      // test-mode sessions correctly so orderMerchantExternalId is preserved.
+      headers["X-Environment"] = this.envName === "prod" ? "prod" : "test";
     }
     const res = await fetch(this.baseUrl + path, {
       method,
