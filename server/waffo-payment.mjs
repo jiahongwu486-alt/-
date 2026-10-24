@@ -192,6 +192,9 @@ function serveStatic(req, res, root, origin) {
 
 /* ---------------- server factory (also used by tests) ---------------- */
 
+// Module-scoped diagnostic buffer for the temporary /api/debug/last-webhook endpoint.
+let lastWebhook = null;
+
 export function createServer({ cfg, client }) {
   return http.createServer(async (req, res) => {
     try {
@@ -223,6 +226,10 @@ export function createServer({ cfg, client }) {
         if (b64) { derH = crypto.createHash("sha256").update(Buffer.from(b64, "base64")).digest("hex"); derMatch = derH.startsWith("e39c3c78806dfc0f"); }
       } catch {}
       return json(res, 200, { ok: true, sha256: h, derSha256: derH, derMatch, expectedDerPrefix: "e39c3c78806dfc0f" }, origin);
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/debug/last-webhook") {
+      return json(res, 200, { ok: true, lastWebhook }, origin);
     }
 
     if (req.method === "POST" && url.pathname === "/api/auth/signup") {
@@ -301,19 +308,24 @@ export function createServer({ cfg, client }) {
 
       let valid = false;
       try { valid = verifyWebhookSignature(raw, sig, cfg.webhookPublicKey); } catch (e) { valid = false; }
-      if (!valid) return json(res, 401, { ok: false, error: "invalid signature" }, origin);
+      const rec = { receivedAt: new Date().toISOString(), hasSigHeader: !!sig, verified: valid };
+      lastWebhook = rec;
+      if (!valid) { rec.outcome = "invalid_signature_401"; return json(res, 401, { ok: false, error: "invalid signature" }, origin); }
 
       let event;
       try { event = JSON.parse(raw); } catch (e) {
+        rec.outcome = "invalid_json_400";
         console.error("[waffo] webhook body is not valid JSON");
         return json(res, 400, { ok: false, error: "invalid JSON" }, origin);
       }
-      // Diagnostic: log the real envelope/field names so we can confirm the schema.
+      rec.eventType = event.eventType;
+      rec.dataKeys = event.data ? Object.keys(event.data) : null;
       console.log("[waffo] webhook eventType=", event.eventType,
         "topKeys=", JSON.stringify(Object.keys(event)),
-        "dataKeys=", JSON.stringify(event.data ? Object.keys(event.data) : null));
+        "dataKeys=", JSON.stringify(rec.dataKeys));
 
       if (event.eventType !== "order.completed") {
+        rec.outcome = "ignored_non_completed";
         console.log("[waffo] ignoring non-completed event:", event.eventType);
         return json(res, 200, { received: true, ignored: true }, origin);
       }
@@ -326,7 +338,9 @@ export function createServer({ cfg, client }) {
         d.orderRef ||
         (d.order && (d.order.orderMerchantExternalId || d.order.orderRef)) ||
         event.orderMerchantExternalId || null;
+      rec.ref = ref;
       if (!ref) {
+        rec.outcome = "missing_order_ref";
         console.error("[waffo] missing order ref in payload; data=", JSON.stringify(d));
         return json(res, 200, { received: true, rejected: "missing_order_ref" }, origin);
       }
@@ -337,11 +351,13 @@ export function createServer({ cfg, client }) {
       if (!check.ok) console.warn("[waffo] payment validation note:", check.reason, "(proceeding — signature verified)");
 
       const eventId = event.id || event.eventId;
-      if (eventSeen(eventId)) return json(res, 200, { received: true, duplicate: true }, origin);
+      if (eventSeen(eventId)) { rec.outcome = "duplicate"; return json(res, 200, { received: true, duplicate: true }, origin); }
       markEventSeen(eventId);
 
       const order = findOrderByResultId(ref);
+      rec.orderFound = !!order;
       if (!order) {
+        rec.outcome = "unknown_order";
         console.error("[waffo] unknown order ref", ref);
         return json(res, 200, { received: true, rejected: "unknown_order" }, origin);
       }
@@ -358,6 +374,7 @@ export function createServer({ cfg, client }) {
         });
         console.log("[waffo] order marked PAID:", ref);
       }
+      rec.outcome = "paid";
       return json(res, 200, { received: true }, origin);
     }
 
