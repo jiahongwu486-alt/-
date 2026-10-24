@@ -94,8 +94,12 @@ export class WaffoClient {
     orderMerchantExternalId,
     metadata,
     expiresInSeconds,
-    language
+    language,
+    auth = "apikey"
   }) {
+    // NOTE: Store Slug auth silently drops orderMerchantExternalId/metadata
+    // (documented anti-tampering behaviour), so API-key auth is required for
+    // order attribution. Callers may pass auth="storeslug" as a fallback.
     const res = await this.request("POST", "/v1/actions/checkout/create-session", {
       productId,
       currency,
@@ -105,7 +109,7 @@ export class WaffoClient {
       metadata,
       expiresInSeconds,
       language
-    }, "storeslug");
+    }, auth);
     return res.data;
   }
 

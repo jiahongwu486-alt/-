@@ -280,7 +280,10 @@ export function createServer({ cfg, client }) {
       appendLine(ORDERS_FILE, order);
 
       try {
-        const session = await client.createCheckoutSession({
+        // API-key auth is required so Waffo stores orderMerchantExternalId and
+        // echoes it in webhooks (Store Slug silently drops it). Fall back to
+        // Store Slug only if the signed request fails, so checkout keeps working.
+        const sessionArgs = {
           productId: cfg.productId,
           currency: cfg.priceCurrency,
           successUrl: cfg.successUrl,
@@ -288,13 +291,23 @@ export function createServer({ cfg, client }) {
           metadata: { orderRef: resultId, product: "full-report" },
           expiresInSeconds: 1800,
           language: "en"
-        });
-        updateOrder(resultId, { sessionId: session.sessionId, checkoutUrl: session.checkoutUrl });
+        };
+        let session, usedAuth;
+        try {
+          session = await client.createCheckoutSession({ ...sessionArgs, auth: "apikey" });
+          usedAuth = "apikey";
+        } catch (e1) {
+          console.error("[waffo] api-key session failed, falling back to store slug:", e1.message);
+          session = await client.createCheckoutSession({ ...sessionArgs, auth: "storeslug" });
+          usedAuth = "storeslug";
+        }
+        updateOrder(resultId, { sessionId: session.sessionId, checkoutUrl: session.checkoutUrl, auth: usedAuth });
         return json(res, 200, {
           ok: true,
           checkoutUrl: session.checkoutUrl,
           sessionId: session.sessionId,
-          resultId
+          resultId,
+          auth: usedAuth
         }, origin);
       } catch (e) {
         updateOrder(resultId, { status: "create_failed", error: String(e.message) });
