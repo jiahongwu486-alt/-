@@ -2,12 +2,14 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   validateAnswers,
   computeResult,
   normalizeAmount,
   validatePaymentEvent,
-  VALID_OPTIONS
+  VALID_OPTIONS,
+  LEGAL_PAGES
 } from "../waffo-payment.mjs";
 import { buildSignature, verifyWebhookSignature, parseWaffoSignature } from "../lib/waffo-client.mjs";
 import { getConfig, assertConfig, missingKeys } from "../lib/env.mjs";
@@ -120,6 +122,22 @@ ok(threw === true, "assertConfig throws on missing keys");
   ok(auth.authenticate(l.token) === null, "logout invalidates token");
 
   fs.rmSync(dir, { recursive: true, force: true });
+}
+
+/* 8. legal pages referenced by the Waffo store settings */
+{
+  const siteRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "middle-east");
+  for (const [route, file] of Object.entries(LEGAL_PAGES)) {
+    const p = path.join(siteRoot, file);
+    const exists = fs.existsSync(p);
+    ok(exists, `legal page ${route} exists`);
+    if (!exists) continue;
+    const html = fs.readFileSync(p, "utf8");
+    ok(html.includes('dir="rtl"'), `legal page ${route} is RTL`);
+    ok(html.includes('class="en-sec"'), `legal page ${route} has an English section`);
+    ok(html.includes("2710376382@qq.com"), `legal page ${route} has a contact address`);
+    ok(!/<\/?script/i.test(html), `legal page ${route} contains no scripts`);
+  }
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -17,6 +17,7 @@ const DIM_IDS = DATA.dimensions.map((d) => d.id);
 const PUBLISHED = QUESTIONS.filter((q) => q.status === "published");
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_ROOT = path.resolve(__dirname, "..", "middle-east");
+export const LEGAL_PAGES = { "/terms": "terms.html", "/privacy": "privacy.html" };
 const DATA_DIR = path.resolve(__dirname, "..", "data");
 const ORDERS_FILE = path.join(DATA_DIR, "waffo_orders.jsonl");
 const EVENTS_FILE = path.join(DATA_DIR, "waffo_processed_events.jsonl");
@@ -489,6 +490,19 @@ export function createServer({ cfg, client }) {
         console.error("[waffo] verify re-check failed", e.message);
       }
       return json(res, 200, { ok: false, error: "not paid" }, origin);
+    }
+
+    // Legal pages are referenced by the Waffo store settings, which expect the
+    // clean /terms and /privacy URLs rather than the .html filenames.
+    if (req.method === "GET" && LEGAL_PAGES[url.pathname]) {
+      const file = path.join(STATIC_ROOT, LEGAL_PAGES[url.pathname]);
+      if (fs.existsSync(file)) {
+        res.writeHead(200, {
+          "Content-Type": "text/html; charset=utf-8",
+          "Access-Control-Allow-Origin": origin
+        });
+        return res.end(fs.readFileSync(file));
+      }
     }
 
     if (serveStatic(req, res, STATIC_ROOT, origin)) return;
