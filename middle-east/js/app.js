@@ -311,7 +311,11 @@
       apiFetch(CFG.createCheckoutEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: state.answers, lang: state.lang })
+        body: JSON.stringify({
+          answers: state.answers,
+          lang: state.lang,
+          email: state.auth && state.auth.user ? state.auth.user.email : undefined
+        })
       })
         .then((r) => r.json())
         .then((j) => {
