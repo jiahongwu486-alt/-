@@ -63,15 +63,14 @@ export class WaffoClient {
       headers["X-Store-Slug"] = this.storeSlug;
       headers["X-Environment"] = this.envName === "prod" ? "prod" : "test";
     } else {
+      // API-Key requests intentionally carry no X-Environment header. The target
+      // environment is bound to the key when it is created, so the header is
+      // ignored for this auth mode (it only applies to Store Slug requests, which
+      // have no credentials to derive the environment from).
       const signature = buildSignature(method, path, timestamp, bodyStr, this.privateKey);
       headers["X-Merchant-Id"] = this.merchantId;
       headers["X-Timestamp"] = timestamp;
       headers["X-Signature"] = signature;
-      // Tell Waffo which environment the call targets. Without this, server-to-server
-      // calls default to production and hit the "store not approved for production
-      // payments" gate even when our store is in test mode. Adding the header routes
-      // test-mode sessions correctly so orderMerchantExternalId is preserved.
-      headers["X-Environment"] = this.envName === "prod" ? "prod" : "test";
     }
     const res = await fetch(this.baseUrl + path, {
       method,
@@ -92,7 +91,9 @@ export class WaffoClient {
   }
 
   async createCheckoutSession({
+    storeId,
     productId,
+    productType = "onetime",
     currency,
     successUrl,
     buyerEmail,
@@ -102,11 +103,16 @@ export class WaffoClient {
     language,
     auth = "apikey"
   }) {
+    // storeId and productType are required by the official create-session
+    // payload; omitting them is the most likely reason metadata /
+    // orderMerchantExternalId were not preserved on the resulting order.
     // NOTE: Store Slug auth silently drops orderMerchantExternalId/metadata
     // (documented anti-tampering behaviour), so API-key auth is required for
     // order attribution. Callers may pass auth="storeslug" as a fallback.
     const res = await this.request("POST", "/v1/actions/checkout/create-session", {
+      storeId,
       productId,
+      productType,
       currency,
       successUrl,
       buyerEmail,

@@ -251,6 +251,7 @@ export function createServer({ cfg, client }) {
     if (req.method === "GET" && url.pathname === "/api/debug/apikey-test") {
       try {
         const s = await client.createCheckoutSession({
+          storeId: cfg.storeId,
           productId: cfg.productId,
           currency: cfg.priceCurrency,
           successUrl: cfg.successUrl,
@@ -330,6 +331,7 @@ export function createServer({ cfg, client }) {
         // silently drops orderMerchantExternalId, so we pre-fill buyerEmail and
         // associate the webhook back to the order by email instead.
         const sessionArgs = {
+          storeId: cfg.storeId,
           productId: cfg.productId,
           currency: cfg.priceCurrency,
           successUrl: cfg.successUrl,

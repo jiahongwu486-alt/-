@@ -11,7 +11,7 @@ import {
   VALID_OPTIONS,
   LEGAL_PAGES
 } from "../waffo-payment.mjs";
-import { buildSignature, verifyWebhookSignature, parseWaffoSignature } from "../lib/waffo-client.mjs";
+import { WaffoClient, buildSignature, verifyWebhookSignature, parseWaffoSignature } from "../lib/waffo-client.mjs";
 import { getConfig, assertConfig, missingKeys } from "../lib/env.mjs";
 
 let passed = 0;
@@ -124,7 +124,56 @@ ok(threw === true, "assertConfig throws on missing keys");
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
-/* 8. legal pages referenced by the Waffo store settings */
+/* 8. create-session request shape matches the official payload */
+{
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, init });
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { sessionId: "cs_test", checkoutUrl: "https://waffo.test/c" } })
+    };
+  };
+  const client = new WaffoClient({
+    merchantId: "MER_x",
+    privateKey: privPem,
+    storeSlug: "my-store-ab12cd34",
+    envName: "test"
+  });
+
+  await client.createCheckoutSession({
+    storeId: "STO_x",
+    productId: "PROD_x",
+    currency: "USD",
+    orderMerchantExternalId: "ref-1",
+    metadata: { orderRef: "ref-1" },
+    auth: "apikey"
+  });
+  await client.createCheckoutSession({
+    storeId: "STO_x",
+    productId: "PROD_x",
+    currency: "USD",
+    auth: "storeslug"
+  });
+  globalThis.fetch = realFetch;
+
+  const body = JSON.parse(calls[0].init.body);
+  const h = calls[0].init.headers;
+  ok(body.storeId === "STO_x", "create-session sends storeId");
+  ok(body.productType === "onetime", "create-session sends productType");
+  ok(body.productId === "PROD_x" && body.currency === "USD", "create-session sends productId and currency");
+  ok(body.orderMerchantExternalId === "ref-1" && body.metadata.orderRef === "ref-1", "create-session carries attribution fields");
+  ok(h["X-Merchant-Id"] === "MER_x" && h["X-Signature"] && h["X-Timestamp"], "apikey auth sends signature headers");
+  ok(h["X-Environment"] === undefined, "apikey auth omits X-Environment");
+
+  const h2 = calls[1].init.headers;
+  ok(h2["X-Store-Slug"] === "my-store-ab12cd34", "store slug auth sends X-Store-Slug");
+  ok(h2["X-Environment"] === "test", "store slug auth sends X-Environment");
+}
+
+/* 9. legal pages referenced by the Waffo store settings */
 {
   const siteRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "middle-east");
   for (const [route, file] of Object.entries(LEGAL_PAGES)) {
