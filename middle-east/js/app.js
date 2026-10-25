@@ -461,6 +461,11 @@
       retry.classList.toggle("hidden", !showRetry);
       if (showRetry) retry.textContent = t(DATA.ui.paymentRefresh);
     }
+    const home = $("#payment-status-home");
+    if (home) {
+      home.classList.toggle("hidden", !showRetry);
+      if (showRetry) home.textContent = t(DATA.ui.paymentHome);
+    }
     box.classList.toggle("is-checking", mode === "checking");
     box.classList.toggle("is-failed", mode === "failed");
   }
@@ -667,6 +672,12 @@
     $("#unlock-btn").addEventListener("click", startPayment);
     $("#completed-payment").addEventListener("click", refreshAccess);
     $("#payment-status-retry").addEventListener("click", runPaymentCheck);
+    $("#payment-status-home").addEventListener("click", () => {
+      try { localStorage.removeItem("hp_resultId"); } catch (e) {}
+      hidePaymentStatus();
+      show("home");
+      renderHome();
+    });
     $("#demo-link").addEventListener("click", (e) => {
       e.preventDefault();
       $("#demo-box").classList.toggle("hidden");

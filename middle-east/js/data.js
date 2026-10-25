@@ -117,7 +117,8 @@ const APP_DATA = {
     emailRequired: { en: "Please enter a valid email so we can deliver your report.", ar: "يرجى إدخال بريد إلكتروني صالح لتسليم تقريرك." },
     paymentChecking: { en: "Confirming your payment…", ar: "جارٍ تأكيد دفعتك…" },
     paymentFailed: { en: "We couldn't confirm your payment yet. If you already paid, your report will appear shortly — or tap refresh.", ar: "تعذّر تأكيد الدفعة بعد. إن كنت دفعت، سيظهر تقريرك قريباً — أو اضغط تحديث." },
-    paymentRefresh: { en: "Refresh", ar: "تحديث" }
+    paymentRefresh: { en: "Refresh", ar: "تحديث" },
+    paymentHome: { en: "Back to home / retake", ar: "العودة للرئيسية / إعادة الاختبار" }
   },
 
   dimensions: [
