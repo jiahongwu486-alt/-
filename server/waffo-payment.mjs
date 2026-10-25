@@ -458,8 +458,13 @@ export function createServer({ cfg, client }) {
       const order = findOrderByResultId(resultId);
       if (!order) return json(res, 404, { ok: false, error: "result not found" }, origin);
 
+      // Only block a *different* logged-in account. An unauthenticated caller
+      // still presents the random resultId, which is effectively an unguessable
+      // bearer secret — rejecting them would lock the buyer out of a report they
+      // just paid for whenever their session isn't attached yet (e.g. the first
+      // poll right after the Waffo redirect, or a lapsed session).
       const user = authenticate(getBearer(req));
-      if (order.userId && (!user || user.id !== order.userId)) {
+      if (order.userId && user && user.id !== order.userId) {
         return json(res, 403, { ok: false, error: "not_your_report" }, origin);
       }
 

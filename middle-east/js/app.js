@@ -620,6 +620,13 @@
       if (localStorage.getItem(UNLOCK_KEY) === "1") state.unlocked = true;
     } catch (e) {}
 
+    // Restore the saved auth token FIRST, so any /api/verify polling started
+    // below already carries credentials. Previously the poll ran before the
+    // token was restored, so its first request was rejected as not_your_report.
+    let savedToken = null;
+    try { savedToken = localStorage.getItem("hp_token"); } catch (e) {}
+    if (savedToken) state.auth.token = savedToken;
+
     let savedResultId = null;
     try { savedResultId = localStorage.getItem("hp_resultId"); } catch (e) {}
     if (savedResultId) {
@@ -633,10 +640,7 @@
     renderHome();
     show("home");
 
-    let savedToken = null;
-    try { savedToken = localStorage.getItem("hp_token"); } catch (e) {}
     if (savedToken) {
-      state.auth.token = savedToken;
       apiFetch("/api/auth/me")
         .then((r) => r.json())
         .then((j) => {
