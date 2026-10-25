@@ -111,7 +111,13 @@ const APP_DATA = {
     authPasswordTooShort: { en: "Password must be at least 8 characters.", ar: "يجب ألا تقل كلمة المرور عن 8 أحرف." },
     authInvalidEmail: { en: "Please enter a valid email.", ar: "يرجى إدخال بريد إلكتروني صالح." },
     authNotYourReport: { en: "This report belongs to another account.", ar: "هذا التقرير يخص حساباً آخر." },
-    authServerError: { en: "Something went wrong. Try again.", ar: "حدث خطأ. حاول مرة أخرى." }
+    authServerError: { en: "Something went wrong. Try again.", ar: "حدث خطأ. حاول مرة أخرى." },
+
+    payEmailLabel: { en: "Email (for your report & receipt)", ar: "البريد الإلكتروني (لتقريرك وإيصال الدفع)" },
+    emailRequired: { en: "Please enter a valid email so we can deliver your report.", ar: "يرجى إدخال بريد إلكتروني صالح لتسليم تقريرك." },
+    paymentChecking: { en: "Confirming your payment…", ar: "جارٍ تأكيد دفعتك…" },
+    paymentFailed: { en: "We couldn't confirm your payment yet. If you already paid, your report will appear shortly — or tap refresh.", ar: "تعذّر تأكيد الدفعة بعد. إن كنت دفعت، سيظهر تقريرك قريباً — أو اضغط تحديث." },
+    paymentRefresh: { en: "Refresh", ar: "تحديث" }
   },
 
   dimensions: [

@@ -178,6 +178,20 @@
     $("#teaser-figure").textContent = t(r.primary.names);
     if (!CFG.previewEnabled) $("#demo-link").classList.add("hidden");
 
+    // Prefill the buyer-email field so the payment can be matched to the order
+    // on return (Store-Slug checkout drops our order ref, so email is the link).
+    const pe = $("#pay-email");
+    const pel = $("#pay-email-label");
+    if (pel) pel.textContent = t(ui.payEmailLabel);
+    if (pe) {
+      if (state.auth && state.auth.user && state.auth.user.email) {
+        pe.value = state.auth.user.email;
+        pe.readOnly = true;
+      } else {
+        pe.readOnly = false;
+      }
+    }
+
     if (state.unlocked) {
       $("#result-locked").classList.add("hidden");
       $("#result-full").classList.remove("hidden");
@@ -307,6 +321,19 @@
 
   function startPayment() {
     $("#pay-msg").textContent = "";
+    $("#pay-email-msg").textContent = "";
+
+    // The buyer email is the only reliable link back to the order after a
+    // Store-Slug checkout (our custom order ref is dropped), so require it.
+    let email = (state.auth && state.auth.user) ? state.auth.user.email : "";
+    const emailInput = $("#pay-email");
+    if (!email && emailInput) email = (emailInput.value || "").trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if ($("#pay-email-msg")) $("#pay-email-msg").textContent = t(DATA.ui.emailRequired);
+      if (emailInput) emailInput.focus();
+      return;
+    }
+
     if (CFG.payProvider === "waffo" && CFG.createCheckoutEndpoint) {
       apiFetch(CFG.createCheckoutEndpoint, {
         method: "POST",
@@ -314,7 +341,7 @@
         body: JSON.stringify({
           answers: state.answers,
           lang: state.lang,
-          email: state.auth && state.auth.user ? state.auth.user.email : undefined
+          email
         })
       })
         .then((r) => r.json())
@@ -370,15 +397,15 @@
   }
 
   function refreshAccess() {
-    pollAccess({ onFail: () => setPayMsg("Payment not confirmed yet. Try again shortly.") });
+    runPaymentCheck();
   }
 
   /* Poll /api/verify until the order is marked paid (by webhook or Waffo re-check),
      then apply the report and show the result screen. Resilient to webhook delay. */
   function pollAccess(opts) {
     opts = opts || {};
-    const maxAttempts = opts.maxAttempts || 18;
-    const interval = opts.interval || 2500;
+    const maxAttempts = opts.maxAttempts || 30;
+    const interval = opts.interval || 3000;
     let resultId = null;
     try { resultId = localStorage.getItem("hp_resultId"); } catch (e) {}
     if (!resultId || !CFG.verifyEndpoint) {
@@ -420,6 +447,36 @@
   function setPayMsg(msg) {
     const el = $("#pay-msg");
     if (el) el.textContent = msg;
+  }
+
+  /* ----- payment confirmation overlay (shown when returning from Waffo) ----- */
+  function setPaymentStatus(mode, text, showRetry) {
+    const box = $("#payment-status");
+    const txt = $("#payment-status-text");
+    const retry = $("#payment-status-retry");
+    if (!box) return;
+    box.classList.remove("hidden");
+    if (txt) txt.textContent = text || "";
+    if (retry) {
+      retry.classList.toggle("hidden", !showRetry);
+      if (showRetry) retry.textContent = t(DATA.ui.paymentRefresh);
+    }
+    box.classList.toggle("is-checking", mode === "checking");
+    box.classList.toggle("is-failed", mode === "failed");
+  }
+  function hidePaymentStatus() {
+    const box = $("#payment-status");
+    if (box) box.classList.add("hidden");
+  }
+  function runPaymentCheck() {
+    show("result");
+    $("#result-locked").classList.add("hidden");
+    $("#result-full").classList.add("hidden");
+    setPaymentStatus("checking", t(DATA.ui.paymentChecking));
+    pollAccess({
+      onDone: () => hidePaymentStatus(),
+      onFail: () => setPaymentStatus("failed", t(DATA.ui.paymentFailed), true)
+    });
   }
 
   /* ---------- auth ---------- */
@@ -561,12 +618,10 @@
     let savedResultId = null;
     try { savedResultId = localStorage.getItem("hp_resultId"); } catch (e) {}
     if (savedResultId) {
-      // Payment may have just completed (e.g. we landed here from the Waffo
-      // success redirect). Poll until the server marks the order paid, then show report.
-      pollAccess({
-        onTick: () => {},
-        onFail: () => {}
-      });
+      // We just landed here from the Waffo success redirect. Show the result
+      // screen in a "confirming payment" state and poll until the server marks
+      // the order paid, then reveal the report automatically.
+      runPaymentCheck();
     }
 
     applyLang();
@@ -611,6 +666,7 @@
 
     $("#unlock-btn").addEventListener("click", startPayment);
     $("#completed-payment").addEventListener("click", refreshAccess);
+    $("#payment-status-retry").addEventListener("click", runPaymentCheck);
     $("#demo-link").addEventListener("click", (e) => {
       e.preventDefault();
       $("#demo-box").classList.toggle("hidden");

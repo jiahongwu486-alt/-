@@ -122,10 +122,15 @@ function normalizeEmail(e) {
 // Store-Slug checkout sessions silently drop orderMerchantExternalId (Waffo
 // anti-tamper), so when the store isn't production-approved we cannot key by ref.
 // Fall back to the buyer email we pre-filled on the session to find the order.
+// Return the MOST RECENT pending order for that email (not the first), so a retry
+// or a second attempt doesn't match a stale earlier order.
 function findPendingOrderByEmail(email) {
   const n = normalizeEmail(email);
   if (!n) return null;
-  return readLines(ORDERS_FILE).find((o) => o.status !== "paid" && normalizeEmail(o.email) === n) || null;
+  const matches = readLines(ORDERS_FILE).filter(
+    (o) => o.status !== "paid" && normalizeEmail(o.email) === n
+  );
+  return matches.length ? matches[matches.length - 1] : null;
 }
 
 function updateOrder(resultId, patch) {

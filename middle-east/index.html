@@ -103,6 +103,12 @@
           <h1 id="result-ready" class="result-title"></h1>
           <p id="result-locked-hint" class="result-sub"></p>
 
+          <label class="field pay-email-field" id="pay-email-field">
+            <span id="pay-email-label" class="field-label"></span>
+            <input id="pay-email" type="email" autocomplete="email" placeholder="you@example.com" />
+          </label>
+          <p id="pay-email-msg" class="pay-msg"></p>
+
           <div class="teaser-card">
             <span id="teaser-figure" class="teaser-figure blurred"></span>
           </div>
@@ -122,6 +128,13 @@
               <p id="code-msg" class="code-msg"></p>
             </div>
           </div>
+        </div>
+
+        <!-- Payment confirmation state (shown when returning from Waffo) -->
+        <div id="payment-status" class="payment-status hidden">
+          <div class="spinner" aria-hidden="true"></div>
+          <p id="payment-status-text" class="payment-status-text"></p>
+          <button id="payment-status-retry" type="button" class="btn-text hidden"></button>
         </div>
 
         <!-- Full report -->
