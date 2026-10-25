@@ -99,13 +99,6 @@
   margin: 0 0 18px;
 }
 
-.legal-footer {
-  text-align: center;
-  padding: 24px 24px 64px;
-  color: var(--sand-dim);
-  font-size: 13px;
-}
-
 @media (max-width: 560px) {
   .legal { padding: 32px 18px 16px; }
   .legal h1 { font-size: 24px; }

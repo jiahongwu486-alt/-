@@ -189,5 +189,23 @@ ok(threw === true, "assertConfig throws on missing keys");
   }
 }
 
+/* 10. site-wide footer carries legal links and a support contact */
+{
+  const siteRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "middle-east");
+  const pages = {
+    "index.html": ["/terms", "/privacy"],
+    "terms.html": ["/privacy"],
+    "privacy.html": ["/terms"]
+  };
+  for (const [file, expectedLinks] of Object.entries(pages)) {
+    const html = fs.readFileSync(path.join(siteRoot, file), "utf8");
+    ok(html.includes('class="footer-links"'), `${file} has the site footer`);
+    ok(html.includes('href="mailto:2710376382@qq.com"'), `${file} footer shows the support address`);
+    for (const href of expectedLinks) {
+      ok(html.includes(`href="${href}"`), `${file} footer links to ${href}`);
+    }
+  }
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;
