@@ -84,6 +84,13 @@ const other = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
 ok(verifyWebhookSignature(raw, `t=${wts},v1=${wv1}`, other.publicKey.export({ type: "spki", format: "pem" })) === false, "wrong public key rejected");
 ok(parseWaffoSignature(`t=${wts},v1=${wv1}`).t === wts, "signature header parsed");
 
+// Tolerance is tightened to 5 minutes; a 10-minute-old signature must be rejected.
+const oldTs = String(Date.now() - 10 * 60 * 1000);
+const oldSign = crypto.createSign("RSA-SHA256");
+oldSign.update(`${oldTs}.${raw}`, "utf8");
+const oldV1 = oldSign.sign(privPem, "base64");
+ok(verifyWebhookSignature(raw, `t=${oldTs},v1=${oldV1}`, pubPem) === false, "stale signature (10 min old) rejected by 5-min tolerance");
+
 /* 6. config validation: missing keys -> clear error, no secret values */
 const cfg = getConfig({
   WAFFO_MERCHANT_ID: "MER_x",

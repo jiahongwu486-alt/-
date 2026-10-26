@@ -34,7 +34,7 @@ export function verifyWebhookSignature(
   rawBody,
   signatureHeader,
   publicKey,
-  { toleranceMs = 45 * 60 * 1000, now = Date.now() } = {}
+  { toleranceMs = 5 * 60 * 1000, now = Date.now() } = {}
 ) {
   const { t, v1 } = parseWaffoSignature(signatureHeader);
   if (!t || !v1) return false;

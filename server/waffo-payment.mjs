@@ -211,9 +211,6 @@ function serveStatic(req, res, root, origin) {
 
 /* ---------------- server factory (also used by tests) ---------------- */
 
-// Module-scoped diagnostic buffer for the temporary /api/debug/last-webhook endpoint.
-let lastWebhook = null;
-
 export function createServer({ cfg, client }) {
   return http.createServer(async (req, res) => {
     try {
@@ -231,53 +228,6 @@ export function createServer({ cfg, client }) {
 
     if (req.method === "GET" && url.pathname === "/health") {
       return json(res, 200, { ok: true, env: cfg.envName, configured: missingKeys(cfg).length === 0 }, origin);
-    }
-
-    // TEMP diagnostic: confirm the deployed webhook public key matches the
-    // Waffo dashboard "公钥 TEST" key (sha256 e39c3c78806dfc0f...). Returns only
-    // a hash, never the key itself. Will be removed after verification.
-    if (req.method === "GET" && url.pathname === "/api/debug/webhook-key-hash") {
-      const k = cfg.webhookPublicKey || "";
-      const h = crypto.createHash("sha256").update(k).digest("hex");
-      let derH = null, derMatch = false;
-      try {
-        const b64 = (k.match(/MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A[0-9A-Za-z+/=]+/) || [""])[0];
-        if (b64) { derH = crypto.createHash("sha256").update(Buffer.from(b64, "base64")).digest("hex"); derMatch = derH.startsWith("e39c3c78806dfc0f"); }
-      } catch {}
-      return json(res, 200, { ok: true, sha256: h, derSha256: derH, derMatch, expectedDerPrefix: "e39c3c78806dfc0f" }, origin);
-    }
-
-    if (req.method === "GET" && url.pathname === "/api/debug/last-webhook") {
-      return json(res, 200, { ok: true, lastWebhook }, origin);
-    }
-
-    // Temporary diagnostic: attempt an API-key auth checkout session and report
-    // the exact error so we can see why it fails on this deployment.
-    if (req.method === "GET" && url.pathname === "/api/debug/apikey-test") {
-      try {
-        const s = await client.createCheckoutSession({
-          storeId: cfg.storeId,
-          productId: cfg.productId,
-          currency: cfg.priceCurrency,
-          successUrl: cfg.successUrl,
-          orderMerchantExternalId: "DIAG-" + crypto.randomUUID(),
-          metadata: { orderRef: "DIAG", product: "diag" },
-          expiresInSeconds: 600,
-          language: "en",
-          auth: "apikey"
-        });
-        return json(res, 200, { ok: true, apikeyWorks: true, sessionId: s.sessionId }, origin);
-      } catch (e) {
-        return json(res, 200, {
-          ok: true,
-          apikeyWorks: false,
-          error: String(e.message),
-          status: e.status || null,
-          body: e.body ? JSON.stringify(e.body).slice(0, 400) : null,
-          hasPrivateKey: !!cfg.privateKey,
-          hasMerchantId: !!cfg.merchantId
-        }, origin);
-      }
     }
 
     if (req.method === "POST" && url.pathname === "/api/auth/signup") {
@@ -397,7 +347,6 @@ export function createServer({ cfg, client }) {
       let valid = false;
       try { valid = verifyWebhookSignature(raw, sig, cfg.webhookPublicKey); } catch (e) { valid = false; }
       const rec = { receivedAt: new Date().toISOString(), hasSigHeader: !!sig, verified: valid };
-      lastWebhook = rec;
       if (!valid) { rec.outcome = "invalid_signature_401"; return json(res, 401, { ok: false, error: "invalid signature" }, origin); }
 
       let event;
