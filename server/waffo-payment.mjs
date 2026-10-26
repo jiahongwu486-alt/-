@@ -306,6 +306,27 @@ export function createServer({ cfg, client }) {
       return json(res, 200, { ok: true }, origin);
     }
 
+    // List the logged-in user's past test orders (most recent first). Each paid
+    // order can be re-opened to view its report; unpaid attempts are shown but
+    // not viewable. Requires a valid session token.
+    if (req.method === "GET" && url.pathname === "/api/my/results") {
+      const user = authenticate(getBearer(req));
+      if (!user) return json(res, 401, { ok: false, error: "auth_required" }, origin);
+      const list = readLines(ORDERS_FILE)
+        .filter((o) => o.userId === user.id)
+        .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+        .map((o) => ({
+          resultId: o.resultId,
+          createdAt: o.createdAt || null,
+          paidAt: o.paidAt || null,
+          status: o.status,
+          primaryId: o.primaryId || null,
+          secondaryId: o.secondaryId || null,
+          lang: o.lang || "en"
+        }));
+      return json(res, 200, { ok: true, results: list }, origin);
+    }
+
     if (req.method === "POST" && url.pathname === "/api/create-checkout") {
       let body;
       try { body = JSON.parse((await readBody(req)).toString("utf8")); }

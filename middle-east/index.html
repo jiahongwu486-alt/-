@@ -6,7 +6,7 @@
   <title>Historical Persona · Middle East</title>
   <meta name="description" content="A personality test that reveals the historical figure who shares your temperament." />
   <meta name="waffo-verify" content="ee82ca0eba8744d33733f0066f562a32" />
-  <link rel="stylesheet" href="css/styles.css?v=20261026b" />
+  <link rel="stylesheet" href="css/styles.css?v=20261026c" />
 </head>
 <body>
   <div class="bg-pattern" aria-hidden="true"></div>
@@ -24,6 +24,7 @@
       <button id="auth-btn" class="btn-text auth-btn" type="button"></button>
       <span id="auth-email" class="auth-email hidden"></span>
       <button id="logout-btn" class="btn-text hidden" type="button"></button>
+      <button id="mytests-btn" class="btn-text hidden" type="button"></button>
       <div class="lang-switch" role="group" aria-label="Language">
         <button id="lang-en" type="button">English</button>
         <span class="lang-sep">|</span>
@@ -211,6 +212,19 @@
 
       </div>
     </section>
+
+    <!-- ============ MY TESTS ============ -->
+    <section id="screen-mytests" class="screen hidden">
+      <div class="mytests-wrap">
+        <div class="mytests-top">
+          <button id="mytests-back" type="button" class="btn-text"></button>
+          <h1 id="mytests-title" class="mytests-title"></h1>
+        </div>
+        <div id="mytests-list" class="mytests-list"></div>
+        <p id="mytests-empty" class="mytests-empty hidden"></p>
+        <p id="mytests-error" class="mytests-error hidden"></p>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">
@@ -245,10 +259,10 @@
     </div>
   </div>
 
-  <script src="js/config.js?v=20261026b"></script>
-  <script src="js/data.js?v=20261026b"></script>
-  <script src="js/data-questions.js?v=20261026b"></script>
-  <script src="js/data-characters.js?v=20261026b"></script>
-  <script src="js/app.js?v=20261026b"></script>
+  <script src="js/config.js?v=20261026c"></script>
+  <script src="js/data.js?v=20261026c"></script>
+  <script src="js/data-questions.js?v=20261026c"></script>
+  <script src="js/data-characters.js?v=20261026c"></script>
+  <script src="js/app.js?v=20261026c"></script>
 </body>
 </html>

@@ -18,7 +18,8 @@
     answers: [],
     unlocked: false,
     result: null,
-    auth: { token: null, user: null }
+    auth: { token: null, user: null },
+    myResults: []
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -48,7 +49,7 @@
 
   /* ---------- screens ---------- */
   function show(id) {
-    ["home", "quiz", "result"].forEach((s) => {
+    ["home", "quiz", "result", "mytests"].forEach((s) => {
       $("#screen-" + s).classList.toggle("hidden", s !== id);
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -489,18 +490,21 @@
 
   function renderAuth() {
     const u = state.auth.user;
+    const myBtn = $("#mytests-btn");
     if (u) {
       $("#auth-btn").classList.add("hidden");
       $("#auth-email").classList.remove("hidden");
       $("#auth-email").textContent = u.email;
       $("#logout-btn").classList.remove("hidden");
       $("#logout-btn").textContent = t(DATA.ui.logout);
+      if (myBtn) myBtn.classList.remove("hidden");
     } else {
       $("#auth-btn").classList.remove("hidden");
       $("#auth-btn").textContent = t(DATA.ui.signIn);
       $("#auth-email").classList.add("hidden");
       $("#auth-email").textContent = "";
       $("#logout-btn").classList.add("hidden");
+      if (myBtn) myBtn.classList.add("hidden");
     }
   }
 
@@ -574,6 +578,95 @@
     } catch (e) {}
     renderAuth();
     if (tok) apiFetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+  }
+
+  /* ---------- my tests ---------- */
+  function characterById(id) {
+    return (window.APP_CHARACTERS || []).find((c) => String(c.person_id) === String(id)) || null;
+  }
+  function characterName(id) {
+    const c = characterById(id);
+    return c ? t(c.names) : String(id || "");
+  }
+  function formatDate(iso) {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString(state.lang === "ar" ? "ar" : "en", { year: "numeric", month: "short", day: "numeric" });
+    } catch (e) { return iso; }
+  }
+  function openMyTests() {
+    const titleEl = $("#mytests-title");
+    const backEl = $("#mytests-back");
+    if (titleEl) titleEl.textContent = t(DATA.ui.myTestsTitle);
+    if (backEl) backEl.textContent = t(DATA.ui.back);
+    fetchMyResults();
+    show("mytests");
+  }
+  function fetchMyResults() {
+    const listEl = $("#mytests-list");
+    const emptyEl = $("#mytests-empty");
+    const errEl = $("#mytests-error");
+    if (listEl) listEl.innerHTML = "";
+    if (emptyEl) emptyEl.classList.add("hidden");
+    if (errEl) errEl.classList.add("hidden");
+    if (!CFG.myResultsEndpoint) {
+      if (errEl) { errEl.textContent = t(DATA.ui.myTestsError); errEl.classList.remove("hidden"); }
+      return;
+    }
+    apiFetch(CFG.myResultsEndpoint)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j || !j.ok) {
+          if (errEl) { errEl.textContent = t(DATA.ui.myTestsError); errEl.classList.remove("hidden"); }
+          return;
+        }
+        renderMyTests(j.results || []);
+      })
+      .catch(() => { if (errEl) { errEl.textContent = t(DATA.ui.myTestsError); errEl.classList.remove("hidden"); } });
+  }
+  function renderMyTests(list) {
+    state.myResults = list || [];
+    const listEl = $("#mytests-list");
+    const emptyEl = $("#mytests-empty");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    if (!state.myResults.length) {
+      if (emptyEl) emptyEl.classList.remove("hidden");
+      return;
+    }
+    emptyEl.classList.add("hidden");
+    state.myResults.forEach((o) => {
+      const paid = o.status === "paid";
+      const card = document.createElement("div");
+      card.className = "mytest-card " + (paid ? "is-paid clickable" : "is-pending");
+
+      const head = document.createElement("div");
+      head.className = "mytest-head";
+      const date = document.createElement("span");
+      date.className = "mytest-date";
+      date.textContent = formatDate(o.createdAt);
+      const status = document.createElement("span");
+      status.className = "mytest-status";
+      status.textContent = paid ? t(DATA.ui.myTestsPaid) : t(DATA.ui.myTestsUnpaid);
+      head.appendChild(date);
+      head.appendChild(status);
+
+      const personas = document.createElement("p");
+      personas.className = "mytest-personas";
+      personas.textContent = characterName(o.primaryId) + " · " + characterName(o.secondaryId);
+
+      card.appendChild(head);
+      card.appendChild(personas);
+
+      if (paid) {
+        card.addEventListener("click", () => {
+          try { localStorage.setItem("hp_resultId", o.resultId); } catch (e) {}
+          restorePaidAccess(o.resultId);
+        });
+      }
+      listEl.appendChild(card);
+    });
   }
 
   /* ---------- share ---------- */
@@ -693,6 +786,8 @@
 
     $("#auth-btn").addEventListener("click", () => openAuth("login"));
     $("#logout-btn").addEventListener("click", doLogout);
+    $("#mytests-btn").addEventListener("click", openMyTests);
+    $("#mytests-back").addEventListener("click", () => { show("home"); renderHome(); });
     $("#auth-close").addEventListener("click", closeAuth);
     $("#tab-login").addEventListener("click", () => openAuth("login"));
     $("#tab-signup").addEventListener("click", () => openAuth("signup"));
@@ -708,8 +803,10 @@
   function rerenderCurrent() {
     const homeHidden = $("#screen-home").classList.contains("hidden");
     const quizHidden = $("#screen-quiz").classList.contains("hidden");
+    const myHidden = $("#screen-mytests").classList.contains("hidden");
     if (!homeHidden) renderHome();
     else if (!quizHidden) renderQuiz();
+    else if (!myHidden) renderMyTests(state.myResults);
     else if (state.result) renderResult();
   }
 

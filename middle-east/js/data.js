@@ -118,7 +118,13 @@ const APP_DATA = {
     paymentChecking: { en: "Confirming your payment…", ar: "جارٍ تأكيد دفعتك…" },
     paymentFailed: { en: "We couldn't confirm your payment yet. If you already paid, your report will appear shortly — or tap refresh.", ar: "تعذّر تأكيد الدفعة بعد. إن كنت دفعت، سيظهر تقريرك قريباً — أو اضغط تحديث." },
     paymentRefresh: { en: "Refresh", ar: "تحديث" },
-    paymentHome: { en: "Back to home / retake", ar: "العودة للرئيسية / إعادة الاختبار" }
+    paymentHome: { en: "Back to home / retake", ar: "العودة للرئيسية / إعادة الاختبار" },
+    myTests: { en: "My Tests", ar: "اختباراتي" },
+    myTestsTitle: { en: "Your past tests", ar: "اختباراتك السابقة" },
+    myTestsEmpty: { en: "You haven't unlocked any report yet. Take the test to see your results here.", ar: "لم تفتح أي تقرير بعد. أجرِ الاختبار لترى نتائجك هنا." },
+    myTestsError: { en: "Couldn't load your tests. Try again.", ar: "تعذّر تحميل اختباراتك. حاول مرة أخرى." },
+    myTestsPaid: { en: "Unlocked", ar: "مفتوح" },
+    myTestsUnpaid: { en: "Not paid", ar: "غير مدفوع" }
   },
 
   dimensions: [

@@ -16,6 +16,7 @@ window.APP_CONFIG = {
   // server/waffo-payment.mjs (local: http://localhost:8787, production: your domain).
   createCheckoutEndpoint: "/api/create-checkout",
   verifyEndpoint: "/api/verify",
+  myResultsEndpoint: "/api/my/results",
 
   // Demo / preview (turn previewEnabled off in production)
   demoUnlockCode: "ME-DEMO-2026",

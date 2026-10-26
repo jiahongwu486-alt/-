@@ -484,3 +484,25 @@ body {
 @keyframes hp-spin { to { transform: rotate(360deg); } }
 .payment-status-text { color: var(--sand); font-size: 15px; max-width: 420px; }
 .payment-status.is-failed .payment-status-text { color: var(--gold-2); }
+
+/* ---------- my tests ---------- */
+.mytests-wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 64px; }
+.mytests-top { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
+.mytests-title { font-size: 22px; color: var(--gold-2); margin: 0; }
+.mytests-list { display: flex; flex-direction: column; gap: 14px; }
+.mytest-card {
+  background: rgba(20, 16, 10, 0.55);
+  border: 1px solid rgba(216, 173, 82, 0.18);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.mytest-card.is-paid.clickable { cursor: pointer; transition: border-color .15s, transform .15s; }
+.mytest-card.is-paid.clickable:hover { border-color: var(--gold); transform: translateY(-2px); }
+.mytest-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.mytest-date { color: var(--sand-dim); font-size: 13px; }
+.mytest-status { font-size: 12px; padding: 2px 10px; border-radius: 999px; }
+.mytest-card.is-paid .mytest-status { color: #0c160c; background: var(--gold); }
+.mytest-card.is-pending .mytest-status { color: var(--sand-dim); background: rgba(216,173,82,0.12); }
+.mytest-personas { color: var(--sand); font-size: 16px; margin: 0; }
+.mytests-empty, .mytests-error { color: var(--sand-dim); text-align: center; padding: 40px 10px; }
+.mytests-error { color: var(--gold-2); }
