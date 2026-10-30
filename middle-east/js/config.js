@@ -18,9 +18,10 @@ window.APP_CONFIG = {
   verifyEndpoint: "/api/verify",
   myResultsEndpoint: "/api/my/results",
 
-  // Demo / preview (turn previewEnabled off in production)
-  demoUnlockCode: "ME-DEMO-2026",
-  previewEnabled: true,
+  // Demo / preview — DISABLED for the production launch (real payments only).
+  // Empty code can never match, so even a console bypass is impossible.
+  demoUnlockCode: "",
+  previewEnabled: false,
 
   // Default language: "ar" (Arabic, RTL) or "en" (English)
   defaultLang: "ar"
